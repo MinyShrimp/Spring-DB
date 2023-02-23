@@ -495,6 +495,40 @@ Unique index or primary key violation: "PUBLIC.PRIMARY_KEY_8 ON PUBLIC.MEMBER(ME
 SQL statement:
 ```
 
+### 추가 - Try-With-Resources
+
+```java
+/**
+ * JDBC - DriverManager 사용
+ */
+@Slf4j
+public class MemberRepositoryV0 {
+    private Connection getConnection() {
+        return DBConnectionUtil.getConnection();
+    }
+
+    public Member save(
+            Member member
+    ) throws SQLException {
+        String sql = "insert into member(member_id, money) values (?, ?)";
+
+        try (
+                Connection con = getConnection();
+                PreparedStatement pstmt = con.prepareStatement(sql)
+        ) {
+            pstmt.setString(1, member.getMemberId());
+            pstmt.setInt(2, member.getMoney());
+            pstmt.executeUpdate();
+            return member;
+
+        } catch (SQLException e) {
+            log.error("db error", e);
+            throw e;
+        }
+    }
+}
+```
+
 ## JDBC 개발 - 조회
 
 ## JDBC 개발 - 수정, 삭제
