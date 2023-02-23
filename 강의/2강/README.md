@@ -279,4 +279,154 @@ private void useDataSource(DataSource dataSource) throws SQLException {
 
 ## DataSource 예제 2 - 커넥션 풀
 
+### DataSourceConnectionPool
+
+#### ConnectionTest
+
+```java
+@Slf4j
+public class ConnectionTest {
+
+    /**
+     * 커넥션 사용
+     */
+    private static void useDataSource(
+            DataSource dataSource
+    ) throws SQLException {
+        Connection con1 = dataSource.getConnection();
+        Connection con2 = dataSource.getConnection();
+        log.info("con1: class = {}, connection = {}", con1.getClass(), con1);
+        log.info("con2: class = {}, connection = {}", con2.getClass(), con2);
+    }
+
+    /**
+     * DataSourceConnectionPool
+     * - 커넥션 풀링: HikariProxyConnection(Proxy) -> JdbcConnection(Target)
+     */
+    @Test
+    void dataSourceConnectionPool() throws SQLException, InterruptedException {
+        HikariDataSource dataSource = new HikariDataSource();
+
+        // 설정
+        dataSource.setJdbcUrl(URL);
+        dataSource.setUsername(USERNAME);
+        dataSource.setPassword(PASSWORD);
+        dataSource.setMaximumPoolSize(10);
+        dataSource.setPoolName("MyPool");
+
+        // 사용
+        useDataSource(dataSource);
+
+        // 커넥션 풀에서 커넥션 생성 시간 대기
+        Thread.sleep(1000);
+    }
+}
+```
+
+HikariCP 커넥션 풀을 사용한다. `HikariDataSource`는 `DataSource`인터페이스를 구현하고 있다.
+
+커넥션 풀 최대 사이즈를 `10`으로 지정하고, 풀의 이름을 `MyPool`이라고 지정했다.
+
+커넥션 풀에서 커넥션을 생성하는 작업은 애플리케이션 실행 속도에 영향을 주지 않기 위해 별도의 쓰레드에서 작동한다.
+별도의 쓰레드에서 동작하기 때문에 테스트가 먼저 종료되어 버린다.
+예제처럼 `Thread.sleep`을 통해 대기 시간을 주어야 쓰레드 풀에 커넥션이 생성되는 로그를 확인할 수 있다.
+
+#### 실행 결과
+
+```
+# 커넥션 풀 초기화 정보 출력
+[main] HikariConfig - MyPool - configuration:
+[main] HikariConfig - allowPoolSuspension.............false
+[main] HikariConfig - autoCommit......................true
+[main] HikariConfig - catalog.........................none
+[main] HikariConfig - connectionInitSql...............none
+[main] HikariConfig - connectionTestQuery.............none
+[main] HikariConfig - connectionTimeout...............30000
+[main] HikariConfig - dataSource......................none
+[main] HikariConfig - dataSourceClassName.............none
+[main] HikariConfig - dataSourceJNDI..................none
+[main] HikariConfig - dataSourceProperties............{password=<masked>}
+[main] HikariConfig - driverClassName.................none
+[main] HikariConfig - exceptionOverrideClassName......none
+[main] HikariConfig - healthCheckProperties...........{}
+[main] HikariConfig - healthCheckRegistry.............none
+[main] HikariConfig - idleTimeout.....................600000
+[main] HikariConfig - initializationFailTimeout.......1
+[main] HikariConfig - isolateInternalQueries..........false
+[main] HikariConfig - jdbcUrl.........................jdbc:h2:tcp://localhost/~/test
+[main] HikariConfig - keepaliveTime...................0
+[main] HikariConfig - leakDetectionThreshold..........0
+[main] HikariConfig - maxLifetime.....................1800000
+[main] HikariConfig - maximumPoolSize.................10
+[main] HikariConfig - metricRegistry..................none
+[main] HikariConfig - metricsTrackerFactory...........none
+[main] HikariConfig - minimumIdle.....................10
+[main] HikariConfig - password........................<masked>
+[main] HikariConfig - poolName........................"MyPool"
+[main] HikariConfig - readOnly........................false
+[main] HikariConfig - registerMbeans..................false
+[main] HikariConfig - scheduledExecutor...............none
+[main] HikariConfig - schema..........................none
+[main] HikariConfig - threadFactory...................internal
+[main] HikariConfig - transactionIsolation............default
+[main] HikariConfig - username........................"sa"
+[main] HikariConfig - validationTimeout...............5000
+
+# 시작 후에 메인 쓰레드가 커넥션 풀 1개를 잡는다.
+[main] HikariDataSource - MyPool - Starting...
+[main] DriverDataSource - Loaded driver with class name org.h2.Driver for jdbcUrl=jdbc:h2:tcp://localhost/~/test
+[main]       HikariPool - MyPool - Added connection conn0: url=jdbc:h2:tcp://localhost/~/test user=SA
+[main] HikariDataSource - MyPool - Start completed.
+
+# 커넥션 풀 전용 쓰레드가 커넥션 풀에 커넥션 생성
+[MyPool connection adder] HikariPool - MyPool - Added connection conn1: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn2: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn3: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn4: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn5: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn6: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn7: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn8: url=jdbc:h2:tcp://localhost/~/test user=SA
+[MyPool connection adder] HikariPool - MyPool - Added connection conn9: url=jdbc:h2:tcp://localhost/~/test user=SA
+
+# 커넥션 풀에서 커넥션 획득
+[main] ConnectionTest - con1: class = class com.zaxxer.hikari.pool.HikariProxyConnection, connection = HikariProxyConnection@1706292388 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA
+[main] ConnectionTest - con2: class = class com.zaxxer.hikari.pool.HikariProxyConnection, connection = HikariProxyConnection@1464555023 wrapping conn1: url=jdbc:h2:tcp://localhost/~/test user=SA
+
+# 현재 커넥션의 사용량을 확인
+[MyPool housekeeper] HikariPool - MyPool - Pool stats (total=10, active=2, idle=8, waiting=0)
+```
+
+### 분석
+
+#### HikariConfig
+
+`HikariCP`관련 설정을 확인할 수 있다. 풀의 이름(`MyPool`)과 최대 풀 수(`10`)을 확인할 수 있다.
+
+#### MyPool connection adder
+
+별도의 쓰레드 사용해서 커넥션 풀에 커넥션을 채우고 있는 것을 확인할 수 있다.
+이 쓰레드는 커넥션 풀에 커넥션을 최대 풀 수(`10`)까지 채운다.
+
+그렇다면 왜 별도의 쓰레드를 사용해서 커넥션 풀에 커넥션을 채우는 것일까?
+
+커넥션 풀에 커넥션을 채우는 것은 상대적으로 오래 걸리는 일이다.
+애플리케이션을 실행할 때 커넥션 풀을 채울 때 까지 마냥 대기하고 있다면 애플리케이션 실행 시간이 늦어진다.
+따라서 이렇게 별도의 쓰레드를 사용해서 커넥션 풀을 채워야 애플리케이션 실행 시간에 영향을 주지 않는다.
+
+#### 커넥션 풀에서 커넥션 획득
+
+커넥션 풀에서 커넥션을 획득하고 그 결과를 출력했다.
+여기서는 커넥션 풀에서 커넥션을 2개 획득하고 반환하지는 않았다.
+따라서 풀에 있는 10개의 커넥션 중에 2개를 가지고 있는 상태이다.
+그래서 마지막 로그를 보면 사용중인 커넥션 `active=2`, 풀에서 대기 상태인 커넥션 `idle=8`을 확인할 수 있다.
+
+```
+[MyPool housekeeper] HikariPool - MyPool - Pool stats (total=10, active=2, idle=8, waiting=0)
+```
+
+> **참고**<br>
+> HikariCP 커넥션 풀에 대한 더 자세한 내용은 다음 공식 사이트를 참고하자.
+> * https://github.com/brettwooldridge/HikariCP
+
 ## DataSource 적용
