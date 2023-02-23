@@ -682,3 +682,264 @@ hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId
     * `@EqualsAndHashCode`를 추가하자.
 
 ## JDBC 개발 - 수정, 삭제
+
+수정과 삭제는 등록과 비슷하다.
+등록, 수정, 삭제처럼 데이터를 변경하는 쿼리는 `executeUpdate()`를 사용하면 된다.
+
+### 수정
+
+#### MemberRepository V0
+
+```java
+/**
+ * JDBC - DriverManager 사용
+ */
+@Slf4j
+public class MemberRepositoryV0 {
+    private Connection getConnection() {
+        return DBConnectionUtil.getConnection();
+    }
+
+    /**
+     * 회원 정보 수정
+     */
+    public void update(
+            String memberId, int money
+    ) throws SQLException {
+        String sql = "update member set money=? where member_id=?";
+
+        try (
+                Connection con = getConnection();
+                PreparedStatement pstmt = con.prepareStatement(sql);
+        ) {
+            pstmt.setInt(1, money);
+            pstmt.setString(2, memberId);
+
+            int resultSize = pstmt.executeUpdate();
+            log.info("resultSize = {}", resultSize);
+        } catch (SQLException e) {
+            log.error("db error", e);
+            throw e;
+        }
+    }
+}
+```
+
+`executeUpdate()`는 쿼리를 실행하고 영향받은 row 수를 반환한다.
+여기서는 하나의 데이터만 변경하기 때문에 결과로 1이 반환된다.
+만약 회원이 100명이고, 모든 회원의 데이터를 한번에 수정하는 `update sql`을 실행하면 결과는 100이 된다
+
+#### MemberRepository V0 Test
+
+```java
+
+@Slf4j
+class MemberRepositoryV0Test {
+
+    MemberRepositoryV0 repository = new MemberRepositoryV0();
+
+    @Test
+    void crud() throws SQLException {
+        // save
+        Member member = new Member("memberV0", 10000);
+        Member savedMember = repository.save(member);
+        log.info("member = {}", member);
+        log.info("savedMember = {}", savedMember);
+
+        // findById
+        Member findMember = repository.findById(savedMember.getMemberId());
+        log.info("findMember = {}", findMember);
+        assertThat(findMember).isEqualTo(savedMember);
+
+        // update
+        // money: 10,000 -> 20,000
+        repository.update(savedMember.getMemberId(), 20000);
+        Member updatedMember = repository.findById(savedMember.getMemberId());
+        log.info("updatedMember = {}", updatedMember);
+        assertThat(updatedMember.getMoney()).isEqualTo(20000);
+    }
+}
+```
+
+회원 데이터의 `money`를 10000 -> 20000으로 수정하고,
+DB에서 데이터를 다시 조회해서 20000으로 변경 되었는지 검증한다.
+
+#### 실행 로그
+
+```
+####################
+# save
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA]
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+
+####################
+# findById
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA]
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
+
+####################
+# update
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn2: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn3: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
+```
+
+`pstmt.executeUpdate()` 의 결과가 1인 것을 확인할 수 있다.
+이것은 해당 SQL에 영향을 받은 로우 수가 1개라는 뜻이다.
+
+```roomsql
+select * from member;
+```
+
+데이터베이스에서 조회하면 `memberV0`의 `money`가 20000으로 변경된 것을 확인할 수 있다.
+
+### 삭제
+
+#### MemberRepository V0
+
+```java
+/**
+ * JDBC - DriverManager 사용
+ */
+@Slf4j
+public class MemberRepositoryV0 {
+    private Connection getConnection() {
+        return DBConnectionUtil.getConnection();
+    }
+
+    /**
+     * 회원 삭제
+     */
+    public void delete(
+            String memberId
+    ) throws SQLException {
+        String sql = "delete from member where member_id=?";
+
+        try (
+                Connection con = getConnection();
+                PreparedStatement pstmt = con.prepareStatement(sql);
+        ) {
+            pstmt.setString(1, memberId);
+            int resultSize = pstmt.executeUpdate();
+            log.info("resultSize = {}", resultSize);
+        } catch (SQLException e) {
+            log.error("db error", e);
+            throw e;
+        }
+    }
+}
+```
+
+쿼리만 변경되고 내용은 거의 같다.
+
+#### MemberRepository V0 Test
+
+```java
+
+@Slf4j
+class MemberRepositoryV0Test {
+
+    MemberRepositoryV0 repository = new MemberRepositoryV0();
+
+    @Test
+    void crud() throws SQLException {
+        // save
+        Member member = new Member("memberV0", 10000);
+        Member savedMember = repository.save(member);
+        log.info("member = {}", member);
+        log.info("savedMember = {}", savedMember);
+        assertThat(savedMember).isEqualTo(member);
+
+        // findById
+        Member findMember = repository.findById(savedMember.getMemberId());
+        log.info("findMember = {}", findMember);
+        assertThat(findMember).isEqualTo(savedMember);
+
+        // update
+        // money: 10,000 -> 20,000
+        repository.update(savedMember.getMemberId(), 20000);
+        Member updatedMember = repository.findById(savedMember.getMemberId());
+        log.info("updatedMember = {}", updatedMember);
+        assertThat(updatedMember.getMoney()).isEqualTo(20000);
+
+        // delete
+        repository.delete(savedMember.getMemberId());
+        assertThatThrownBy(
+                () -> repository.findById(savedMember.getMemberId())
+        ).isInstanceOf(NoSuchElementException.class);
+    }
+}
+```
+
+회원을 삭제한 다음 `findById()`를 통해서 조회한다.
+회원이 없기 때문에 `NoSuchElementException`이 발생한다.
+`assertThatThrownBy`는 해당 예외가 발생해야 검증에 성공한다.
+
+#### 실행 로그
+
+```
+####################
+# save
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA]
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+
+####################
+# findById
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA]
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
+
+####################
+# update
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn2: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn3: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
+
+####################
+# delete
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn4: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+
+hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+
+hello.springdb1.connection.DBConnectionUtil - 
+get connection = [conn5: url=jdbc:h2:tcp://localhost/~/test user=SA] 
+class          = [class org.h2.jdbc.JdbcConnection]
+```
+
+#### 참고
+
+마지막에 회원을 삭제하기 때문에 테스트가 정상 수행되면, 이제부터는 같은 테스트를 반복해서 실행할 수 있다.
+물론 테스트 중간에 오류가 발생해서 삭제 로직을 수행할 수 없다면 테스트를 반복해서 실행할 수 없다.
+
+트랜잭션을 활용하면 이 문제를 깔끔하게 해결할 수 있는데, 자세한 내용은 뒤에서 설명한다
