@@ -430,3 +430,169 @@ HikariCP 커넥션 풀을 사용한다. `HikariDataSource`는 `DataSource`인터
 > * https://github.com/brettwooldridge/HikariCP
 
 ## DataSource 적용
+
+### MemberRepository V1
+
+`MemberRepositoryV0` 에서 복사
+
+```java
+/**
+ * JDBC
+ * - DataSource 사용
+ * - JdbcUtils 사용
+ */
+@Slf4j
+@RequiredArgsConstructor
+public class MemberRepositoryV1 {
+    private final DataSource dataSource;
+
+    /**
+     * JdbcUtils 를 이용해 close 메서드 호출
+     */
+    private void close(
+            Connection con,
+            Statement stmt,
+            ResultSet rs
+    ) {
+        JdbcUtils.closeResultSet(rs);
+        JdbcUtils.closeStatement(stmt);
+        JdbcUtils.closeConnection(con);
+    }
+
+    /**
+     * 데이터 소스를 이용해 커넥션을 얻어온다.
+     * - 실제 데이터 소스는 주입받아서 사용한다.
+     */
+    private Connection getConnection() throws SQLException {
+        Connection con = dataSource.getConnection();
+        log.info("get connection = {}, class = {}", con, con.getClass());
+        return con;
+    }
+    
+    // save, findById, update, delete
+}
+```
+
+* `DataSource` 의존관계 주입
+    * 외부에서 `DataSource`를 주입 받아서 사용한다. 이제 직접 만든 `DBConnectionUtil`을 사용하지 않아도 된다.
+    * `DataSource`는 표준 인터페이스 이기 때문에 `DriverManagerDataSource`에서 `HikariDataSource`로 변경되어도 해당 코드를 변경하지 않아도 된다.
+* `JdbcUtils` 편의 메서드
+    * 스프링은 JDBC를 편리하게 다룰 수 있는 `JdbcUtils`라는 편의 메서드를 제공한다.
+    * `JdbcUtils`을 사용하면 커넥션을 좀 더 편리하게 닫을 수 있다.
+
+### MemberRepository V1 Test
+
+`MemberRepositoryV0Test` 에서 복사
+
+```java
+@Slf4j
+public class MemberRepositoryV1Test {
+
+    MemberRepositoryV1 repository;
+
+    @BeforeEach
+    void beforeEach() {
+        // 기본 DriverManager - 항상 새로운 커넥션을 획득
+        // DriverManagerDataSource dataSource = new DriverManagerDataSource(URL, USERNAME, PASSWORD);
+
+        // 커넥션 풀링: HikariProxyConnection -> JdbcConnection
+        HikariDataSource dataSource = new HikariDataSource();
+        dataSource.setJdbcUrl(URL);
+        dataSource.setUsername(USERNAME);
+        dataSource.setPassword(PASSWORD);
+
+        repository = new MemberRepositoryV1(dataSource);
+    }
+    
+    // crud
+}
+```
+
+* `MemberRepositoryV1`은 `DataSource` 의존관계 주입이 필요하다.
+
+### 결과 로그
+
+#### DriverManagerDataSource
+
+```
+####################
+# save
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+member = Member(memberId=memberV0, money=10000)
+savedMember = Member(memberId=memberV0, money=10000)
+
+####################
+# findById
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+findMember = Member(memberId=memberV0, money=10000)
+
+####################
+# update
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn2: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+resultSize = 1
+
+####################
+# findById
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn3: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+updatedMember = Member(memberId=memberV0, money=20000)
+
+####################
+# delete
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn4: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+resultSize = 1
+
+####################
+# findById
+Creating new JDBC DriverManager Connection to [jdbc:h2:tcp://localhost/~/test]
+get connection = [conn5: url=jdbc:h2:tcp://localhost/~/test user=SA], class = [class org.h2.jdbc.JdbcConnection]
+```
+
+`DriverManagerDataSource`를 사용하면 `conn0~5` 번호를 통해서 항상 새로운 커넥션이 생성되어서 사용되는 것을 확인할 수 있다.
+
+#### HikariDataSource
+
+```
+####################
+# save
+get connection = HikariProxyConnection@917831210 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+member = Member(memberId=memberV0, money=10000)
+savedMember = Member(memberId=memberV0, money=10000)
+
+####################
+# findById
+get connection = HikariProxyConnection@914507705 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+findMember = Member(memberId=memberV0, money=10000)
+
+####################
+# update
+get connection = HikariProxyConnection@910599202 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+resultSize = 1
+
+####################
+# findById
+get connection = HikariProxyConnection@1963862935 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+updatedMember = Member(memberId=memberV0, money=20000)
+
+####################
+# delete
+get connection = HikariProxyConnection@1754444726 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+resultSize = 1
+
+####################
+# findById
+get connection = HikariProxyConnection@1528195520 wrapping conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class com.zaxxer.hikari.pool.HikariProxyConnection
+```
+
+* 커넥션 풀 사용시 `conn0`커넥션이 **재사용** 된 것을 확인할 수 있다.
+* 테스트는 순서대로 실행되기 때문에 커넥션을 사용하고 다시 돌려주는 것을 반복한다. 따라서 `conn0`만 사용된다.
+* 웹 애플리케이션에 동시에 여러 요청이 들어오면 여러 쓰레드에서 커넥션 풀의 커넥션을 다양하게 가져가는 상황을 확인할 수 있다.
+
+### DI
+
+`DriverManagerDataSource` -> `HikariDataSource`로 변경해도 `MemberRepositoryV1`의 코드는 전혀 변경하지 않아도 된다.
+`MemberRepositoryV1`는 `DataSource` 인터페이스에만 의존하기 때문이다. 이것이 `DataSource`를 사용하는 장점이다.(DI + OCP)
