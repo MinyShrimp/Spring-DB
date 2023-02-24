@@ -7,32 +7,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Slf4j
-public class CheckedTest {
+public class UnCheckedTest {
 
     @Test
-    void checked_catch() {
+    void unchecked_catch() {
         Service service = new Service();
         assertThat(service.callCatch()).isEqualTo("ex");
     }
 
     @Test
-    void checked_throw() {
+    void unchecked_throw() {
         Service service = new Service();
-        assertThatThrownBy(service::callThrow).isInstanceOf(MyCheckedException.class);
+        assertThatThrownBy(service::callThrow).isInstanceOf(MyUncheckedException.class);
     }
 
     /**
-     * Exception 상속 - CheckedException
+     * RuntimeException 을 상속받은 예외는 언체크 예외가 된다.
      */
-    static class MyCheckedException extends Exception {
-        public MyCheckedException(String message) {
+    static class MyUncheckedException extends RuntimeException {
+        public MyUncheckedException(String message) {
             super(message);
         }
     }
 
     /**
      * 가상 Service
-     * 예외를 잡아서 처리하거나, 밖으로 던져야 한다.
+     * UncheckedException 은 예외를 잡아도 되고, (명시적으로) 던지지 않아도 된다.
      */
     static class Service {
         static final Repository repository = new Repository();
@@ -44,7 +44,7 @@ public class CheckedTest {
             String errorMessage = null;
             try {
                 repository.call();
-            } catch (MyCheckedException e) {
+            } catch (MyUncheckedException e) {
                 log.info("예외 처리, message = {}", e.getMessage(), e);
                 errorMessage = e.getMessage();
             }
@@ -52,9 +52,9 @@ public class CheckedTest {
         }
 
         /**
-         * 체크 예외를 처리하지 않고 밖으로 던짐
+         * (명시적으로) 던지지 않아도 된다.
          */
-        public void callThrow() throws MyCheckedException {
+        public void callThrow() {
             repository.call();
         }
 
@@ -62,11 +62,11 @@ public class CheckedTest {
 
     /**
      * 가상 Repository
-     * - MyCheckedException 을 던진다
+     * - MyUncheckedException 을 던진다
      */
     static class Repository {
-        public void call() throws MyCheckedException {
-            throw new MyCheckedException("ex");
+        public void call() {
+            throw new MyUncheckedException("ex");
         }
     }
 }

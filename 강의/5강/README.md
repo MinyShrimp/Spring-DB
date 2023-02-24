@@ -182,6 +182,105 @@ public void callThrow() {
 
 ## 언체크 예외 기본 이해
 
+* `RuntimeException`과 그 하위 예외는 언체크 예외로 분류된다.
+* 언체크 예외는 말 그대로 **컴파일러가 예외를 체크하지 않는다**는 뜻이다.
+* 언체크 예외는 체크 예외와 기본적으로 동일하다.
+    * 차이가 있다면 예외를 던지는 `throws`를 선언하지 않고, 생략할 수 있다. 이 경우 자동으로 예외를 던진다.
+
+### 체크 예외 VS 언체크 예외
+
+* 체크 예외
+    * 예외를 잡아서 처리하지 않으면 항상 `throws`에 던지는 예외를 선언해야 한다.
+* 언체크 예외
+    * 예외를 잡아서 처리하지 않아도 `throws`를 생략할 수 있다.
+
+### 언체크 예외 전체 코드
+
+```java
+@Slf4j
+public class UnCheckedTest {
+
+    @Test
+    void unchecked_catch() {
+        Service service = new Service();
+        assertThat(service.callCatch()).isEqualTo("ex");
+    }
+
+    @Test
+    void unchecked_throw() {
+        Service service = new Service();
+        assertThatThrownBy(service::callThrow).isInstanceOf(MyUncheckedException.class);
+    }
+
+    /**
+     * RuntimeException 을 상속받은 예외는 언체크 예외가 된다.
+     */
+    static class MyUncheckedException extends RuntimeException {
+        public MyUncheckedException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * 가상 Service
+     * UncheckedException 은 예외를 잡아도 되고, (명시적으로) 던지지 않아도 된다.
+     */
+    static class Service {
+        static final Repository repository = new Repository();
+
+        /**
+         * 예외를 잡아서 처리
+         */
+        public String callCatch() {
+            String errorMessage = null;
+            try {
+                repository.call();
+            } catch (MyUncheckedException e) {
+                log.info("예외 처리, message = {}", e.getMessage(), e);
+                errorMessage = e.getMessage();
+            }
+            return errorMessage;
+        }
+
+        /**
+         * (명시적으로) 던지지 않아도 된다.
+         */
+        public void callThrow() {
+            repository.call();
+        }
+
+    }
+
+    /**
+     * 가상 Repository
+     * - MyUncheckedException 을 던진다
+     */
+    static class Repository {
+        public void call() {
+            throw new MyUncheckedException("ex");
+        }
+    }
+}
+```
+
+### 언체크 예외의 장단점
+
+언체크 예외는 예외를 잡아서 처리할 수 없을 때, 예외를 밖으로 던지는 `throws 예외`를 생략할 수 있다.
+이것 때문에 장점과 단점이 동시에 존재한다.
+
+* 장점
+    * 신경쓰고 싶지 않은 언체크 예외를 무시할 수 있다.
+    * 체크 예외의 경우 처리할 수 없는 예외를 밖으로 던지려면 항상 `throws 예외`를 선언해야 하지만, 언체크 예외는 이 부분을 생략할 수 있다.
+    * 이후에 설명하겠지만, 신경쓰고 싶지 않은 예외의 의존관계를 참조하지 않아도 되는 장점이 있다.
+* 단점
+    * 언체크 예외는 개발자가 실수로 예외를 누락할 수 있다.
+    * 반면에 체크 예외는 컴파일러를 통해 예외 누락을 잡아준다.
+
+### 정리
+
+체크 예외와 언체크 예외의 차이는 사실 예외를 처리할 수 없을 때 예외를 밖으로 던지는 부분에 있다.
+이 부분을 필수로 선언해야 하는가 생략할 수 있는가의 차이다.
+
 ## 체크 예외 활용
 
 ## 언체크 예외 활용
