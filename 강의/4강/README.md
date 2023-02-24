@@ -1041,6 +1041,172 @@ org.springframework.transaction.annotation.Transactional
 
 ## 트랜잭션 문제 해결 - 트랜잭션 AOP 적용
 
+### MemberService V3_3
+
+```java
+/**
+ * 계좌 이체 비즈니스 로직 V3-3
+ * - @Transactional AOP
+ */
+@Slf4j
+@RequiredArgsConstructor
+public class MemberServiceV3_3 {
+    private final MemberRepositoryV3 repository;
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    @Transactional
+    public void accountTransfer(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        // 비즈니스 로직
+        bizLogic(fromId, toId, money);
+    }
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    private void bizLogic(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        Member fromMember = repository.findById(fromId);
+        Member toMember = repository.findById(toId);
+
+        repository.update(fromId, fromMember.getMoney() - money);
+        validation(toMember);
+        repository.update(toId, toMember.getMoney() + money);
+    }
+
+    /**
+     * 대상 회원의 ID가 ex 인지 검증
+     */
+    private void validation(
+            Member toMember
+    ) {
+        if (toMember.getMemberId().equals("ex")) {
+            throw new IllegalStateException("이체중 예외 발생");
+        }
+    }
+}
+```
+
+* 순수한 비즈니스 로직만 남기고, 트랜잭션 관련 코드는 모두 제거했다.
+* 스프링이 제공하는 트랜잭션 AOP를 적용하기 위해 `@Transactional`애노테이션을 추가했다.
+* `@Transactional` 애노테이션은 메서드에 붙여도 되고, 클래스에 붙여도 된다.
+    * 클래스에 붙이면 외부에서 호출 가능한 **public 메서드**가 AOP 적용 대상이 된다.
+
+### MemberService V3_3 Test
+
+```java
+@Slf4j
+@SpringBootTest
+class MemberServiceV3_3Test {
+    private static final String MEMBER_A = "memberA";
+    private static final String MEMBER_B = "memberB";
+    private static final String MEMBER_EX = "ex";
+
+    @Autowired
+    private MemberRepositoryV3 memberRepository;
+
+    @Autowired
+    private MemberServiceV3_3 memberService;
+
+    /**
+     * 각 테스트가 끝나면 데이터 삭제
+     */
+    @AfterEach()
+    void afterEach() throws SQLException {
+        memberRepository.delete(MEMBER_A);
+        memberRepository.delete(MEMBER_B);
+        memberRepository.delete(MEMBER_EX);
+    }
+
+    /**
+     * 해당 스프링 Bean이 AOP Proxy로 되어있는지 확인
+     */
+    @Test
+    void AopCheck() {
+        log.info("memberService class = {}", memberService.getClass());
+        log.info("memberRepository class = {}", memberRepository.getClass());
+        assertThat(AopUtils.isAopProxy(memberService)).isTrue();
+        assertThat(AopUtils.isAopProxy(memberRepository)).isFalse();
+    }
+
+    /**
+     * 테스트용 스프링 Bean 등록
+     */
+    @TestConfiguration
+    static class TestConfig {
+        @Bean
+        DataSource dataSource() {
+            return new DriverManagerDataSource(URL, USERNAME, PASSWORD);
+        }
+
+        @Bean
+        PlatformTransactionManager transactionManager() {
+            return new DataSourceTransactionManager(dataSource());
+        }
+
+        @Bean
+        MemberRepositoryV3 memberRepositoryV3() {
+            return new MemberRepositoryV3(dataSource());
+        }
+
+        @Bean
+        MemberServiceV3_3 memberServiceV3_3() {
+            return new MemberServiceV3_3(memberRepositoryV3());
+        }
+    }
+}
+```
+
+* `@SpringBootTest`
+    * 스프링 AOP를 적용하려면 스프링 컨테이너가 필요하다.
+    * 이 애노테이션이 있으면 테스트시 스프링 부트를 통해 스프링 컨테이너를 생성한다.
+    * 그리고 테스트에서 `@Autowired` 등을 통해 스프링 컨테이너가 관리하는 빈들을 사용할 수 있다.
+* `@TestConfiguration`
+    * 테스트 안에서 내부 설정 클래스를 만들어서 사용하면서 이 에노테이션을 붙이면,
+      스프링 부트가 자동으로 만들어주는 빈들에 추가로 필요한 스프링 빈들을 등록하고 테스트를 수행할 수 있다.
+* `TestConfig`
+    * `DataSource` 스프링에서 기본으로 사용할 데이터소스를 스프링 빈으로 등록한다.
+        * 추가로 트랜잭션 매니저에서도 사용한다.
+    * `DataSourceTransactionManager`트랜잭션 매니저를 스프링 빈으로 등록한다.
+        * 스프링이 제공하는 트랜잭션 AOP는 스프링 빈에 등록된 트랜잭션 매니저를 찾아서 사용하기 때문에 트랜잭션 매니저를 스프링 빈으로 등록해두어야 한다.
+
+### AOP 프록시 적용 확인
+
+```java
+/**
+ * 해당 스프링 Bean이 AOP Proxy로 되어있는지 확인
+ */
+@Test
+void AopCheck() {
+    log.info("memberService class = {}", memberService.getClass());
+    log.info("memberRepository class = {}", memberRepository.getClass());
+    assertThat(AopUtils.isAopProxy(memberService)).isTrue();
+    assertThat(AopUtils.isAopProxy(memberRepository)).isFalse();
+}
+```
+
+### 실행결과 - AopCheck()
+
+```
+memberService class = class hello.springdb1.v3.service.MemberServiceV3_3$$SpringCGLIB$$0
+memberRepository class = class hello.springdb1.v3.repository.MemberRepositoryV3
+```
+
+* 먼저 AOP 프록시가 적용되었는지 확인해보자.
+    * `AopCheck()`의 실행 결과를 보면 `memberService`에 `EnhancerBySpringCGLIB..`라는 부분을 통해 **프록시(CGLIB)가 적용**된 것을 확인할 수 있다.
+    * `memberRepository`에는 AOP를 적용하지 않았기 때문에 프록시가 적용되지 않는다.
+* 나머지 테스트 코드들을 실행해보면 트랜잭션이 정상 수행되고, 실패시 정상 롤백된 것을 확인할 수 있다.
+
 ## 트랜잭션 문제 해결 - 트랜잭션 AOP 정리
 
 ## 스프링 부트의 자동 리소스 등록
