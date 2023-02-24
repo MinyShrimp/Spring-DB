@@ -1,7 +1,7 @@
-package hello.springdb1.service;
+package hello.springdb1.v2.service;
 
 import hello.springdb1.domain.Member;
-import hello.springdb1.repository.MemberRepositoryV1;
+import hello.springdb1.v2.repository.MemberRepositoryV2;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,16 +15,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 /**
- * 기본 동작, 트랜잭션이 없어서 문제 발생
+ * 트랜잭션 - 커넥션 파라미터 전달 방식 동기화
  */
-class MemberServiceV1Test {
-
+class MemberServiceV2Test {
     private static final String MEMBER_A = "memberA";
     private static final String MEMBER_B = "memberB";
     private static final String MEMBER_EX = "ex";
 
-    private MemberRepositoryV1 memberRepository;
-    private MemberServiceV1 memberService;
+    private MemberRepositoryV2 memberRepository;
+    private MemberServiceV2 memberService;
 
     /**
      * 각 테스트가 시작하기전 초기화
@@ -32,8 +31,8 @@ class MemberServiceV1Test {
     @BeforeEach
     void beforeEach() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource(URL, USERNAME, PASSWORD);
-        memberRepository = new MemberRepositoryV1(dataSource);
-        memberService = new MemberServiceV1(memberRepository);
+        memberRepository = new MemberRepositoryV2(dataSource);
+        memberService = new MemberServiceV2(dataSource, memberRepository);
     }
 
     /**
@@ -84,7 +83,7 @@ class MemberServiceV1Test {
         Member findMemberEx = memberRepository.findById(memberEx.getMemberId());
 
         // memberA의 돈만 2000원 줄고, ex의 돈은 10000원 그대로이다.
-        assertThat(findMemberA.getMoney()).isEqualTo(8000);
+        assertThat(findMemberA.getMoney()).isEqualTo(10000);
         assertThat(findMemberEx.getMoney()).isEqualTo(10000);
     }
 }

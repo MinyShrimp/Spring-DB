@@ -1,7 +1,7 @@
-package hello.springdb1.service;
+package hello.springdb1.v1.service;
 
 import hello.springdb1.domain.Member;
-import hello.springdb1.repository.MemberRepositoryV1;
+import hello.springdb1.v1.repository.MemberRepositoryV1;
 import lombok.RequiredArgsConstructor;
 
 import java.sql.SQLException;

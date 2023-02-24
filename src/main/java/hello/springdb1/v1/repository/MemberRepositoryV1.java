@@ -1,4 +1,4 @@
-package hello.springdb1.repository;
+package hello.springdb1.v1.repository;
 
 import hello.springdb1.domain.Member;
 import lombok.RequiredArgsConstructor;
@@ -11,11 +11,12 @@ import java.util.NoSuchElementException;
 
 /**
  * JDBC
- * - ConnectionParam
+ * - DataSource 사용
+ * - JdbcUtils 사용
  */
 @Slf4j
 @RequiredArgsConstructor
-public class MemberRepositoryV2 {
+public class MemberRepositoryV1 {
     private final DataSource dataSource;
 
     /**
@@ -104,42 +105,6 @@ public class MemberRepositoryV2 {
     }
 
     /**
-     * 회원 조회
-     * - ConnectionParam
-     */
-    public Member findById(
-            Connection con,
-            String memberId
-    ) throws SQLException, NoSuchElementException {
-        String sql = "select * from member where member_id = ?";
-
-        PreparedStatement pstmt = null;
-        ResultSet rs = null;
-
-        try {
-            pstmt = con.prepareStatement(sql);
-
-            pstmt.setString(1, memberId);
-            rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return new Member(
-                        rs.getString("member_id"),
-                        rs.getInt("money")
-                );
-            } else {
-                throw new NoSuchElementException("member not found memberId = " + memberId);
-            }
-        } catch (SQLException e) {
-            log.error("db error", e);
-            throw e;
-        } finally {
-            // 커넥션은 여기서 닫지 않는다.
-            close(null, pstmt, rs);
-        }
-    }
-
-    /**
      * 회원 정보 수정
      */
     public void update(
@@ -164,35 +129,6 @@ public class MemberRepositoryV2 {
             throw e;
         } finally {
             close(con, pstmt, null);
-        }
-    }
-
-    /**
-     * 회원 정보 수정
-     * - ConnectionParam
-     */
-    public void update(
-            Connection con,
-            String memberId,
-            int money
-    ) throws SQLException {
-        String sql = "update member set money=? where member_id=?";
-
-        PreparedStatement pstmt = null;
-
-        try {
-            pstmt = con.prepareStatement(sql);
-
-            pstmt.setInt(1, money);
-            pstmt.setString(2, memberId);
-
-            int resultSize = pstmt.executeUpdate();
-            log.info("resultSize = {}", resultSize);
-        } catch (SQLException e) {
-            log.error("db error", e);
-            throw e;
-        } finally {
-            close(null, pstmt, null);
         }
     }
 

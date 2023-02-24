@@ -478,8 +478,8 @@ class MemberRepositoryV0Test {
 ```
 hello.springdb1.connection.DBConnectionUtil - get connection = conn0: url=jdbc:h2:tcp://localhost/~/test user=SA, class = class org.h2.jdbc.JdbcConnection
 
-hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
-hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
 ```
 
 데이터베이스에서 `select * from member`쿼리를 실행하면 데이터가 저장된 것을 확인할 수 있다.
@@ -665,8 +665,8 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
-hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
 
 ####################
 # findById
@@ -674,7 +674,7 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
 ```
 
 * `isEqualTo()`
@@ -773,8 +773,8 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
-hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
 
 ####################
 # findById
@@ -782,7 +782,7 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
 
 ####################
 # update
@@ -790,13 +790,13 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn2: url=jdbc:h2:tcp://localhost/~/test user=SA] 
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+hello.springdb1.v0.repository.MemberRepositoryV0 - resultSize = 1
 
 hello.springdb1.connection.DBConnectionUtil - 
 get connection = [conn3: url=jdbc:h2:tcp://localhost/~/test user=SA] 
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
 ```
 
 `pstmt.executeUpdate()` 의 결과가 1인 것을 확인할 수 있다.
@@ -899,8 +899,8 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn0: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
-hello.springdb1.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - member = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - savedMember = Member(memberId=memberV0, money=10000)
 
 ####################
 # findById
@@ -908,7 +908,7 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn1: url=jdbc:h2:tcp://localhost/~/test user=SA]
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - findMember = Member(memberId=memberV0, money=10000)
 
 ####################
 # update
@@ -916,13 +916,13 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn2: url=jdbc:h2:tcp://localhost/~/test user=SA] 
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+hello.springdb1.v0.repository.MemberRepositoryV0 - resultSize = 1
 
 hello.springdb1.connection.DBConnectionUtil - 
 get connection = [conn3: url=jdbc:h2:tcp://localhost/~/test user=SA] 
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
+hello.springdb1.v0.repository.MemberRepositoryV0Test - updatedMember = Member(memberId=memberV0, money=20000)
 
 ####################
 # delete
@@ -930,7 +930,7 @@ hello.springdb1.connection.DBConnectionUtil -
 get connection = [conn4: url=jdbc:h2:tcp://localhost/~/test user=SA] 
 class          = [class org.h2.jdbc.JdbcConnection]
 
-hello.springdb1.repository.MemberRepositoryV0 - resultSize = 1
+hello.springdb1.v0.repository.MemberRepositoryV0 - resultSize = 1
 
 hello.springdb1.connection.DBConnectionUtil - 
 get connection = [conn5: url=jdbc:h2:tcp://localhost/~/test user=SA] 

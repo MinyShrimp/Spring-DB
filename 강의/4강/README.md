@@ -451,6 +451,12 @@ public interface PlatformTransactionManager extends TransactionManager {
 
 ## 트랜잭션 문제 해결 - 트랜잭션 매니저 1
 
+#### MemberRepository V3
+
+```java
+
+```
+
 ## 트랜잭션 문제 해결 - 트랜잭션 매니저 2
 
 ## 트랜잭션 문제 해결 - 트랜잭션 템플릿

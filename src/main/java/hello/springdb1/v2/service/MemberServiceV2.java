@@ -1,7 +1,7 @@
-package hello.springdb1.service;
+package hello.springdb1.v2.service;
 
 import hello.springdb1.domain.Member;
-import hello.springdb1.repository.MemberRepositoryV2;
+import hello.springdb1.v2.repository.MemberRepositoryV2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

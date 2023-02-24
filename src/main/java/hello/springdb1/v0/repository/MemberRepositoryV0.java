@@ -1,4 +1,4 @@
-package hello.springdb1.repository;
+package hello.springdb1.v0.repository;
 
 import hello.springdb1.connection.DBConnectionUtil;
 import hello.springdb1.domain.Member;
