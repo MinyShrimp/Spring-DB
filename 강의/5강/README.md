@@ -67,6 +67,119 @@ WAS가 해당 예외를 받아서 처리하는데, 주로 사용자에게 개발
 
 ## 체크 예외 기본 이해
 
+* `Exception`과 그 하위 예외는 모두 컴파일러가 체크하는 체크 예외이다. 단 `RuntimeException`은 예외로 한다.
+* 체크 예외는 잡아서 처리하거나, 또는 밖으로 던지도록 선언해야한다. 그렇지 않으면 **컴파일 오류**가 발생한다.
+
+### 체크 예외 전체 코드
+
+```java
+@Slf4j
+public class CheckedTest {
+
+    @Test
+    void checked_catch() {
+        Service service = new Service();
+        Assertions.assertThat(service.callCatch()).isEqualTo("ex");
+    }
+
+    @Test
+    void checked_throw() {
+        Service service = new Service();
+        Assertions.assertThatThrownBy(service::callThrow).isInstanceOf(MyCheckedException.class);
+    }
+
+    /**
+     * Exception 상속 - CheckedException
+     */
+    static class MyCheckedException extends Exception {
+        public MyCheckedException(String message) {
+            super(message);
+        }
+    }
+
+    /**
+     * 가상 Service
+     * 예외를 잡아서 처리하거나, 밖으로 던져야 한다.
+     */
+    static class Service {
+        static final Repository repository = new Repository();
+
+        /**
+         * 예외를 잡아서 처리
+         */
+        public String callCatch() {
+            String errorMessage = null;
+            try {
+                repository.call();
+            } catch (MyCheckedException e) {
+                log.info("예외 처리, message = {}", e.getMessage(), e);
+                errorMessage = e.getMessage();
+            }
+            return errorMessage;
+        }
+
+        /**
+         * 체크 예외를 처리하지 않고 밖으로 던짐
+         */
+        public void callThrow() throws MyCheckedException {
+            repository.call();
+        }
+
+    }
+
+    /**
+     * 가상 Repository
+     * - MyCheckedException 을 던진다
+     */
+    static class Repository {
+        public void call() throws MyCheckedException {
+            throw new MyCheckedException("ex");
+        }
+    }
+}
+```
+
+#### Exception을 상속받은 예외는 체크 예외가 된다.
+
+```java
+static class MyCheckedException extends Exception {
+    public MyCheckedException(String message) {
+        super(message);
+    }
+}
+```
+
+* `MyCheckedException`는 `Exception`을 상속받았다.
+    * `Exception`을 상속받으면 체크 예외가 된다.
+    * 참고로 `RuntimeException`을 상속받으면 언체크 예외가 된다.
+* 이런 규칙은 자바 언어에서 문법으로 정한 것이다.
+* 예외가 제공하는 여러가지 기본 기능이 있는데, 그 중에 오류 메시지를 보관하는 기능도 있다.
+    * 예제에서 보는 것 처럼 생성자를 통해서 해당 기능을 그대로 사용하면 편리하다.
+
+#### 체크 예외를 밖으로 던지지 않으면 컴파일 오류 발생
+
+```java
+public void callThrow() {
+    repository.call();
+}
+```
+
+* `throws`를 지정하지 않으면 컴파일 오류가 발생한다.
+    * `Unhandled exception: hello.jdbc.exception.basic.CheckedTest.MyCheckedException`
+* 체크 예외의 경우 예외를 잡아서 처리하거나 또는 `throws`를 지정해서 예외를 밖으로 던진다는 선언을 필수로 해주어야 한다.
+
+### 체크 예외의 장단점
+
+체크 예외는 예외를 잡아서 처리할 수 없을 때, 예외를 밖으로 던지는 `throws 예외`를 필수로 선언해야 한다.
+그렇지 않으면 **컴파일 오류가 발생**한다. 이것 때문에 장점과 단점이 동시에 존재한다.
+
+* 장점
+    * 개발자가 실수로 예외를 누락하지 않도록 컴파일러를 통해 문제를 잡아주는 훌륭한 안전 장치이다.
+* 단점
+    * 하지만 실제로는 개발자가 모든 체크 예외를 반드시 잡거나 던지도록 처리해야 하기 때문에, 너무 번거로운 일이 된다.
+    * 크게 신경쓰고 싶지 않은 예외까지 모두 챙겨야 한다.
+    * 추가로 의존관계에 따른 단점도 있는데 이 부분은 뒤에서 설명하겠다.
+
 ## 언체크 예외 기본 이해
 
 ## 체크 예외 활용
