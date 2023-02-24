@@ -926,4 +926,193 @@ DataAccessException resultEx = exTranslator.translate("select", sql, e);
 
 ## 스프링 예외 추상화 적용
 
+이제 우리가 만든 애플리케이션에 스프링이 제공하는 데이터 접근 예외 추상화와 SQL 예외 변환기를 적용해보자.
+
+### MemberRepositoryV4_2
+
+```java
+/**
+ * 예외 누수 문제 해결
+ * 체크 예외를 런타임 예외로 변경
+ * MemberRepository 인터페이스 사용
+ * throws SQLException 제거
+ * (NEW!) SQLExceptionTranslator 추가
+ */
+@Slf4j
+public class MemberRepositoryV4_2 implements MemberRepository {
+    private final DataSource dataSource;
+    private final SQLExceptionTranslator exTranslator;
+
+    public MemberRepositoryV4_2(DataSource dataSource) {
+        this.dataSource = dataSource;
+        this.exTranslator = new SQLErrorCodeSQLExceptionTranslator(dataSource);
+    }
+
+    /**
+     * JdbcUtils 를 이용해 close 메서드 호출
+     * - 트랜잭션 동기화를 사용하려면 DataSourceUtils를 사용해야 한다.
+     */
+    private void close(
+            Connection con,
+            Statement stmt,
+            ResultSet rs
+    ) {
+        JdbcUtils.closeResultSet(rs);
+        JdbcUtils.closeStatement(stmt);
+        DataSourceUtils.releaseConnection(con, dataSource);
+    }
+
+    /**
+     * 데이터 소스를 이용해 커넥션을 얻어온다.
+     * - 실제 데이터 소스는 주입받아서 사용한다.
+     * - 트랜잭션 동기화를 사용하려면 DataSourceUtils를 사용해야 한다.
+     */
+    private Connection getConnection() throws SQLException {
+        Connection con = DataSourceUtils.getConnection(dataSource);
+        log.info("get connection = [{}], class = [{}]", con, con.getClass());
+        return con;
+    }
+
+    /**
+     * 회원 저장
+     */
+    @Override
+    public Member save(Member member) {
+        String sql = "insert into member(member_id, money) values(?, ?)";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+            pstmt.setString(1, member.getMemberId());
+            pstmt.setInt(2, member.getMoney());
+            pstmt.executeUpdate();
+            return member;
+        } catch (SQLException e) {
+            throw exTranslator.translate("save", sql, e);
+        } finally {
+            close(con, pstmt, null);
+        }
+    }
+
+    /**
+     * 회원 조회
+     */
+    @Override
+    public Member findById(String memberId) {
+        String sql = "select * from member where member_id = ?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+
+            pstmt.setString(1, memberId);
+            rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return new Member(
+                        rs.getString("member_id"),
+                        rs.getInt("money")
+                );
+            } else {
+                throw new NoSuchElementException("member not found memberId = " + memberId);
+            }
+        } catch (SQLException e) {
+            throw new NoSuchElementException("member not found memberId = " + memberId, e);
+        } finally {
+            close(con, pstmt, rs);
+        }
+    }
+
+    /**
+     * 회원 정보 수정
+     */
+    @Override
+    public void update(String memberId, int money) {
+        String sql = "update member set money=? where member_id=?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+
+            pstmt.setInt(1, money);
+            pstmt.setString(2, memberId);
+
+            int resultSize = pstmt.executeUpdate();
+            log.info("resultSize = {}", resultSize);
+        } catch (SQLException e) {
+            throw exTranslator.translate("update", sql, e);
+        } finally {
+            close(con, pstmt, null);
+        }
+    }
+
+    /**
+     * 회원 삭제
+     */
+    @Override
+    public void delete(String memberId) {
+        String sql = "delete from member where member_id=?";
+
+        Connection con = null;
+        PreparedStatement pstmt = null;
+
+        try {
+            con = getConnection();
+            pstmt = con.prepareStatement(sql);
+
+            pstmt.setString(1, memberId);
+
+            int resultSize = pstmt.executeUpdate();
+            log.info("resultSize = {}", resultSize);
+        } catch (SQLException e) {
+            throw exTranslator.translate("delete", sql, e);
+        } finally {
+            close(con, pstmt, null);
+        }
+    }
+}
+```
+
+기존 코드에서 스프링 예외 변환기를 사용하도록 변경되었다.
+
+```java
+} catch (SQLException e) {
+    throw exTranslator.translate("save", sql, e);
+}
+```
+
+### MemberServiceV4Test - 수정
+
+```java
+@Bean
+MemberRepository memberRepository() {
+    // return new MemberRepositoryV4_1(dataSource); // 단순 예외 변환
+    return new MemberRepositoryV4_2(dataSource); // 스프링 예외 변환
+}
+```
+
+`MemberRepository`인터페이스가 제공되므로 스프링 빈에 등록할 빈만
+`MemberRepositoryV4_1`에서 `MemberRepositoryV4_2`로 교체하면 리포지토리를 변경해서 테스트를 확인할 수 있다.
+
+### 정리
+
+드디어 예외에 대한 부분을 깔끔하게 정리했다.
+
+스프링이 예외를 추상화해준 덕분에, 서비스 계층은 특정 리포지토리의 구현 기술과 예외에 종속적이지 않게 되었다.
+따라서 서비스 계층은 특정 구현 기술이 변경되어도 그대로 유지할 수 있게 되었다.
+다시 DI를 제대로 활용할 수 있게 된 것이다.
+
+추가로 서비스 계층에서 예외를 잡아서 복구해야 하는 경우,
+예외가 스프링이 제공하는 데이터 접근 예외로 변경되어서 서비스 계층에 넘어오기 때문에 필요한 경우 예외를 잡아서 복구하면 된다.
+
 ## JDBC 반목 문제 해결 - JdbcTemplate
