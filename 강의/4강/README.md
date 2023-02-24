@@ -451,11 +451,241 @@ public interface PlatformTransactionManager extends TransactionManager {
 
 ## 트랜잭션 문제 해결 - 트랜잭션 매니저 1
 
-#### MemberRepository V3
+### MemberRepository V3
 
 ```java
+/**
+ * 트랜잭션 - 트랜잭션 메니저
+ * - DataSourceUtils.getConnection()
+ * - DataSourceUtils.releaseConnection()
+ */
+@Slf4j
+@RequiredArgsConstructor
+public class MemberRepositoryV3 {
+    private final DataSource dataSource;
 
+    /**
+     * JdbcUtils 를 이용해 close 메서드 호출
+     * - 트랜잭션 동기화를 사용하려면 DataSourceUtils를 사용해야 한다.
+     */
+    private void close(
+            Connection con,
+            Statement stmt,
+            ResultSet rs
+    ) {
+        JdbcUtils.closeResultSet(rs);
+        JdbcUtils.closeStatement(stmt);
+        DataSourceUtils.releaseConnection(con, dataSource);
+    }
+
+    /**
+     * 데이터 소스를 이용해 커넥션을 얻어온다.
+     * - 실제 데이터 소스는 주입받아서 사용한다.
+     * - 트랜잭션 동기화를 사용하려면 DataSourceUtils를 사용해야 한다.
+     */
+    private Connection getConnection() throws SQLException {
+        Connection con = DataSourceUtils.getConnection(dataSource);
+        log.info("get connection = [{}], class = [{}]", con, con.getClass());
+        return con;
+    }
+}
 ```
+
+커넥션을 파라미터로 전달하는 부분이 모두 제거되었다.
+
+#### `DataSourceUtils.getConnection()`
+
+* `getConnection()`에서 `DataSourceUtils.getConnection()`를 사용하도록 변경된 부분을 특히 주의해야 한다.
+* `DataSourceUtils.getConnection()`는 다음과 같이 동작한다.
+    * **트랜잭션 동기화 매니저가 관리하는 커넥션이 있으면 해당 커넥션을 반환한다.**
+    * 트랜잭션 동기화 매니저가 관리하는 커넥션이 없는 경우 새로운 커넥션을 생성해서 반환한다.
+
+#### `DataSourceUtils.releaseConnection()`
+
+* `close()`에서 `DataSourceUtils.releaseConnection()`를 사용하도록 변경된 부분을 특히 주의해야 한다.
+    * 커넥션을 `con.close()`를 사용해서 직접 닫아버리면 커넥션이 유지되지 않는 문제가 발생한다.
+    * 이 커넥션은 이후 로직은 물론이고, 트랜잭션을 종료(커밋, 롤백)할 때 까지 살아있어야 한다.
+* `DataSourceUtils.releaseConnection()`을 사용하면 커넥션을 바로 닫는 것이 아니다.
+    * **트랜잭션을 사용하기 위해 동기화된 커넥션은 커넥션을 닫지 않고 그대로 유지해준다.**
+    * 트랜잭션 동기화 매니저가 관리하는 커넥션이 없는 경우 해당 커넥션을 닫는다.
+
+### MemberService V3_1
+
+```java
+/**
+ * 계좌 이체 비즈니스 로직 V3
+ * - 트랜잭션 매니저 사용
+ */
+@Slf4j
+@RequiredArgsConstructor
+public class MemberServiceV3_1 {
+    private final PlatformTransactionManager transactionManager;
+    private final MemberRepositoryV3 repository;
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    public void accountTransfer(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        // 트랜잭션 시작
+        TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
+
+        try {
+            // 비즈니스 로직
+            bizLogic(fromId, toId, money);
+
+            // 커밋
+            transactionManager.commit(status);
+        } catch (Exception e) {
+            // 롤백
+            transactionManager.rollback(status);
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    private void bizLogic(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        Member fromMember = repository.findById(fromId);
+        Member toMember = repository.findById(toId);
+
+        repository.update(fromId, fromMember.getMoney() - money);
+        validation(toMember);
+        repository.update(toId, toMember.getMoney() + money);
+    }
+
+    /**
+     * 대상 회원의 ID가 ex 인지 검증
+     */
+    private void validation(
+            Member toMember
+    ) {
+        if (toMember.getMemberId().equals("ex")) {
+            throw new IllegalStateException("이체중 예외 발생");
+        }
+    }
+}
+```
+
+#### `private final PlatformTransactionManager transactionManager`
+
+* 트랜잭션 매니저를 주입 받는다.
+    * 지금은 JDBC 기술을 사용하기 때문에 `DataSourceTransactionManager`구현체를 주입 받아야 한다.
+* 물론 JPA 같은 기술로 변경되면 `JpaTransactionManager`를 주입 받으면 된다.
+
+#### `transactionManager.getTransaction()`
+
+* 트랜잭션을 시작한다.
+* `TransactionStatus status`를 반환한다.
+    * 현재 트랜잭션의 상태 정보가 포함되어 있다.
+    * 이후 트랜잭션을 커밋, 롤백할 때 필요하다.
+
+#### `new DefaultTransactionDefinition()`
+
+트랜잭션과 관련된 옵션을 지정할 수 있다. 자세한 내용은 뒤에서 설명한다.
+
+#### `transactionManager.commit(status)`
+
+트랜잭션이 성공하면 이 로직을 호출해서 커밋하면 된다.
+
+#### `transactionManager.rollback(status)`
+
+문제가 발생하면 이 로직을 호출해서 트랜잭션을 롤백하면 된다.
+
+### MemberService V3_1 Test
+
+```java
+@Slf4j
+class MemberServiceV3_1Test {
+    private static final String MEMBER_A = "memberA";
+    private static final String MEMBER_B = "memberB";
+    private static final String MEMBER_EX = "ex";
+
+    private MemberRepositoryV3 memberRepository;
+    private MemberServiceV3_1 memberService;
+
+    /**
+     * 각 테스트가 시작하기전 초기화
+     */
+    @BeforeEach
+    void beforeEach() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(URL, USERNAME, PASSWORD);
+        PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+        memberRepository = new MemberRepositoryV3(dataSource);
+        memberService = new MemberServiceV3_1(transactionManager, memberRepository);
+    }
+
+    /**
+     * 각 테스트가 끝나면 데이터 삭제
+     */
+    @AfterEach()
+    void afterEach() throws SQLException {
+        memberRepository.delete(MEMBER_A);
+        memberRepository.delete(MEMBER_B);
+        memberRepository.delete(MEMBER_EX);
+    }
+
+    @Test
+    @DisplayName("정상 이체")
+    void accountTransfer() throws SQLException {
+        // given
+        Member memberA = new Member(MEMBER_A, 10000);
+        Member memberB = new Member(MEMBER_B, 10000);
+        memberRepository.save(memberA);
+        memberRepository.save(memberB);
+
+        // when
+        memberService.accountTransfer(memberA.getMemberId(), memberB.getMemberId(), 2000);
+
+        // then
+        Member findMemberA = memberRepository.findById(memberA.getMemberId());
+        Member findMemberB = memberRepository.findById(memberB.getMemberId());
+        assertThat(findMemberA.getMoney()).isEqualTo(8000);
+        assertThat(findMemberB.getMoney()).isEqualTo(12000);
+    }
+
+    @Test
+    @DisplayName("이체중 예외 발생")
+    void accountTransferEx() throws SQLException {
+        // given
+        Member memberA = new Member(MEMBER_A, 10000);
+        Member memberEx = new Member(MEMBER_EX, 10000);
+        memberRepository.save(memberA);
+        memberRepository.save(memberEx);
+
+        // when
+        assertThatThrownBy(
+                () -> memberService.accountTransfer(memberA.getMemberId(), memberEx.getMemberId(), 2000)
+        ).isInstanceOf(IllegalStateException.class);
+
+        // then
+        Member findMemberA = memberRepository.findById(memberA.getMemberId());
+        Member findMemberEx = memberRepository.findById(memberEx.getMemberId());
+
+        // memberA의 돈만 2000원 줄고, ex의 돈은 10000원 그대로이다.
+        assertThat(findMemberA.getMoney()).isEqualTo(10000);
+        assertThat(findMemberEx.getMoney()).isEqualTo(10000);
+    }
+}
+```
+
+#### `new DataSourceTransactionManager(dataSource)`
+
+* JDBC 기술을 사용하므로, JDBC용 트랜잭션 매니저(`DataSourceTransactionManager`)를 선택해서 서비스에 주입한다.
+* 트랜잭션 매니저는 데이터소스를 통해 커넥션을 생성하므로 `DataSource`가 필요하다.
+
+테스트 해보면 모든 결과가 정상 동작하는 것을 확인할 수 있다. 당연히 롤백 기능도 잘 동작한다.
 
 ## 트랜잭션 문제 해결 - 트랜잭션 매니저 2
 
