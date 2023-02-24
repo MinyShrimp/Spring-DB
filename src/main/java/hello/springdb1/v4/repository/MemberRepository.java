@@ -1,4 +1,4 @@
-package hello.springdb1.repository;
+package hello.springdb1.v4.repository;
 
 import hello.springdb1.domain.Member;
 
