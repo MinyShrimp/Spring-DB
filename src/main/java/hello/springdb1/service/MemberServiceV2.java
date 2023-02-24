@@ -35,7 +35,7 @@ public class MemberServiceV2 {
             con.setAutoCommit(false);
             bizLogic(con, fromId, toId, money);
             con.commit();
-        } catch (SQLException e) {
+        } catch (Exception e) {
             con.rollback();
             throw e;
         } finally {
