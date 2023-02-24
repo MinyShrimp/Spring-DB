@@ -163,7 +163,7 @@ A의 잔고를 5000원 감소하고, B의 잔고를 5000원 증가해야한다.
 
 ### 스키마
 
-```roomsql
+```sql
 drop table member if exists;
 create table member (
     member_id varchar(10),
@@ -182,7 +182,7 @@ create table member (
 
 #### 자동 커밋 설정
 
-```roomsql
+```sql
 set autocommit true; //자동 커밋 모드 설정
 insert into member(member_id, money) values ('data1',10000); //자동 커밋
 insert into member(member_id, money) values ('data2',10000); //자동 커밋
@@ -192,7 +192,7 @@ insert into member(member_id, money) values ('data2',10000); //자동 커밋
 
 #### 수동 커밋 설정
 
-```roomsql
+```sql
 set autocommit false; //수동 커밋 모드 설정
 insert into member(member_id, money) values ('data3',10000);
 insert into member(member_id, money) values ('data4',10000);
@@ -222,7 +222,7 @@ jsessionid 값이 같으면 같은 세션에 접근하게 된다.
 
 #### 데이터 초기화 SQL
 
-```roomsql
+```sql
 //데이터 초기화
 set autocommit true;
 delete from member;
@@ -233,7 +233,7 @@ insert into member(member_id, money) values ('oldId',10000);
 
 #### 결과 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -250,7 +250,7 @@ select * from member;
 
 #### 세션 1 신규 데이터 추가 SQL
 
-```roomsql
+```sql
 //트랜잭션 시작
 set autocommit false; //수동 커밋 모드
 insert into member(member_id, money) values ('newId1',10000);
@@ -259,7 +259,7 @@ insert into member(member_id, money) values ('newId2',10000);
 
 #### 결과 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -277,13 +277,13 @@ select * from member;
 
 #### 세션 1에서 커밋을 호출해보자.
 
-```roomsql
+```sql
 commit; //데이터베이스에 반영
 ```
 
 #### 결과 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -298,7 +298,7 @@ select * from member;
 
 #### 예제를 처음으로 돌리기 위해 데이터를 초기화하자.
 
-```roomsql
+```sql
 //데이터 초기화
 set autocommit true;
 delete from member;
@@ -311,7 +311,7 @@ insert into member(member_id, money) values ('oldId',10000);
 
 #### 세션 1에서 트랜잭션을 시작 상태로 만든 다음에 데이터를 추가하자.
 
-```roomsql
+```sql
 //트랜잭션 시작
 set autocommit false; //수동 커밋 모드
 insert into member(member_id, money) values ('newId1',10000);
@@ -320,7 +320,7 @@ insert into member(member_id, money) values ('newId2',10000);
 
 #### 결과 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -333,14 +333,14 @@ select * from member;
 
 #### 세션1에서 롤백을 호출해보자.
 
-```roomsql
+```sql
 //롤백으로 데이터베이스에 변경 사항을 반영하지 않는다.
 rollback; 
 ```
 
 #### 결과 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -365,7 +365,7 @@ select * from member;
 
 #### 기본 데이터 입력 - SQL
 
-```roomsql
+```sql
 set autocommit true;
 delete from member;
 insert into member(member_id, money) values ('memberA',10000);
@@ -377,13 +377,13 @@ insert into member(member_id, money) values ('memberB',10000);
 ![img_12.png](img_12.png)
 
 * `memberA`의 돈을 `memberB`에게 2000원 계좌이체하는 트랜잭션을 실행해보자.
-    * 다음과 같은 2번의 `update`쿼리가 수행되어야 한다.
+  * 다음과 같은 2번의 `update`쿼리가 수행되어야 한다.
 * `set autocommit false`로 설정한다.
 * 아직 커밋하지 않았으므로 다른 세션에는 기존 데이터가 조회된다.
 
 #### 계좌이체 실행 SQL - 성공
 
-```roomsql
+```sql
 set autocommit false;
 update member set money=10000 - 2000 where member_id = 'memberA';
 update member set money=10000 + 2000 where member_id = 'memberB';
@@ -406,7 +406,7 @@ update member set money=10000 + 2000 where member_id = 'memberB';
 
 #### 기본 데이터 입력 - SQL
 
-```roomsql
+```sql
 set autocommit true;
 delete from member;
 insert into member(member_id, money) values ('memberA',10000);
@@ -418,13 +418,13 @@ insert into member(member_id, money) values ('memberB',10000);
 ![img_14.png](img_14.png)
 
 * 계좌이체를 실행하는 도중에 SQL에 문제가 발생한다.
-    * 그래서 `memberA`의 돈을 2000원 줄이는 것에는 성공했지만, `memberB`의 돈을 2000원 증가시키는 것에 실패한다.
+  * 그래서 `memberA`의 돈을 2000원 줄이는 것에는 성공했지만, `memberB`의 돈을 2000원 증가시키는 것에 실패한다.
 * 두 번째 SQL은 `member_iddd`라는 필드에 오타가 있다.
-    * 두 번째 `update`쿼리를 실행하면 SQL 오류가 발생하는 것을 확인할 수 있다.
+  * 두 번째 `update`쿼리를 실행하면 SQL 오류가 발생하는 것을 확인할 수 있다.
 
 #### 계좌이체 실행 SQL - 오류
 
-```roomsql
+```sql
 set autocommit false;
 update member set money=10000 - 2000 where member_id = 'memberA'; // 성공
 update member set money=10000 + 2000 where member_iddd = 'memberB'; // 쿼리 예외 발생
@@ -444,7 +444,7 @@ update member set money=10000 + 2000 where member_iddd = 'memberB' [42122-200] 4
 
 ![img_15.png](img_15.png)
 
-```roomsql
+```sql
 commit;
 ```
 
@@ -464,7 +464,7 @@ commit;
 
 #### 기본 데이터 입력 - SQL
 
-```roomsql
+```sql
 set autocommit true;
 delete from member;
 insert into member(member_id, money) values ('memberA',10000);
@@ -476,12 +476,12 @@ insert into member(member_id, money) values ('memberB',10000);
 ![img_14.png](img_14.png)
 
 * 계좌이체를 실행하는 도중에 SQL에 문제가 발생한다.
-    * 그래서 `memberA`의 돈을 2000원 줄이는 것에는 성공했지만, `memberB`의 돈을 2000원 증가시키는 것에 실패한다.
+  * 그래서 `memberA`의 돈을 2000원 줄이는 것에는 성공했지만, `memberB`의 돈을 2000원 증가시키는 것에 실패한다.
 * 두 번째 `update`쿼리를 실행하면 SQL 오류가 발생하는 것을 확인할 수 있다.
 
 #### 계좌이체 실행 SQL - 오류
 
-```roomsql
+```sql
 set autocommit false;
 update member set money=10000 - 2000 where member_id = 'memberA'; // 성공
 update member set money=10000 + 2000 where member_iddd = 'memberB'; // 쿼리 예외 발생
@@ -501,7 +501,7 @@ update member set money=10000 + 2000 where member_iddd = 'memberB' [42122-200] 4
 
 ![img_16.png](img_16.png)
 
-```roomsql
+```sql
 rollback;
 ```
 
@@ -551,9 +551,9 @@ rollback;
 
 * 세션 1은 트랜잭션을 시작한다.
 * 세션 1은 `memberA`의 `money`를 500으로 변경을 시도한다.
-    * 이때 해당 로우의 락을 먼저 획득해야 한다.
-    * 락이 남아 있으므로 세션 1은 락을 획득한다.
-    * (세션 1이 세션 2보다 조금 더 빨리 요청했다.)
+  * 이때 해당 로우의 락을 먼저 획득해야 한다.
+  * 락이 남아 있으므로 세션 1은 락을 획득한다.
+  * (세션 1이 세션 2보다 조금 더 빨리 요청했다.)
 * 세션 1은 락을 획득했으므로 해당 로우에 `update sql`을 수행한다.
 
 #### 락 2
@@ -563,10 +563,10 @@ rollback;
 * 세션 2는 트랜잭션을 시작한다.
 * 세션 2도 `memberA`의 `money` 데이터를 변경하려고 시도한다.
 * 이때 해당 로우의 락을 먼저 획득해야 한다.
-    * 락이 없으므로 락이 돌아올 때 까지 대기한다.
+  * 락이 없으므로 락이 돌아올 때 까지 대기한다.
 * 참고로 세션 2가 락을 무한정 대기하는 것은 아니다.
-    * 락 대기 시간을 넘어가면 **락 타임아웃 오류**가 발생한다.
-    * 락 대기 시간은 설정할 수 있다.
+  * 락 대기 시간을 넘어가면 **락 타임아웃 오류**가 발생한다.
+  * 락 대기 시간은 설정할 수 있다.
 
 #### 락 3
 
@@ -602,7 +602,7 @@ rollback;
 
 #### 기본 데이터 입력 - SQL
 
-```roomsql
+```sql
 set autocommit true;
 delete from member;
 insert into member(member_id, money) values ('memberA',10000);
@@ -616,7 +616,7 @@ insert into member(member_id, money) values ('memberA',10000);
 
 #### 세션 1
 
-```roomsql
+```sql
 set autocommit false;
 update member set money=500 where member_id = 'memberA';
 ```
@@ -630,7 +630,7 @@ update member set money=500 where member_id = 'memberA';
 
 #### 세션2
 
-```roomsql
+```sql
 SET LOCK_TIMEOUT 60000;
 set autocommit false;
 update member set money=1000 where member_id = 'memberA';
@@ -638,11 +638,11 @@ update member set money=1000 where member_id = 'memberA';
 
 * 세션 2는 `memberA`의 데이터를 1000원으로 수정하려 한다.
 * 세션 1이 트랜잭션을 커밋하거나 롤백해서 종료하지 않았으므로 아직 세션 1이 락을 가지고 있다.
-    * 따라서 세션 2는 락을 획득하지 못하기 때문에 데이터를 수정할 수 없다.
-    * 세션 2는 락이 돌아올 때 까지 대기하게 된다.
+  * 따라서 세션 2는 락을 획득하지 못하기 때문에 데이터를 수정할 수 없다.
+  * 세션 2는 락이 돌아올 때 까지 대기하게 된다.
 * `SET LOCK_TIMEOUT 60000`
-    * 락 획득 시간을 60초로 설정한다. 60초 안에 락을 얻지 못하면 예외가 발생한다.
-    * 참고로 H2 데이터베이스에서는 딱 60초에 예외가 발생하지는 않고, 시간이 조금 더 걸릴 수 있다.
+  * 락 획득 시간을 60초로 설정한다. 60초 안에 락을 얻지 못하면 예외가 발생한다.
+  * 참고로 H2 데이터베이스에서는 딱 60초에 예외가 발생하지는 않고, 시간이 조금 더 걸릴 수 있다.
 
 #### 세션2 락 획득
 
@@ -657,7 +657,7 @@ update member set money=1000 where member_id = 'memberA';
 
 #### 세션1
 
-```roomsql
+```sql
 commit;
 ```
 
@@ -683,14 +683,14 @@ commit;
 
 #### 세션2
 
-```roomsql
+```sql
 commit;
 ```
 
 ### 세션2 락 타임아웃
 
 * `SET LOCK_TIMEOUT <milliseconds>`
-    * 락 타임아웃 시간을 설정한다.
+  * 락 타임아웃 시간을 설정한다.
 * 세션 2에 설정하면 세션 2가 10초 동안 대기해도 락을 얻지 못하면 락 타임아웃 오류가 발생한다.
 
 #### 세션2의 실행 결과
@@ -738,7 +738,7 @@ HYT00/50200
 
 #### 기본 데이터 입력 - SQL
 
-```roomsql
+```sql
 set autocommit true;
 delete from member;
 insert into member(member_id, money) values ('memberA',10000);
@@ -746,18 +746,18 @@ insert into member(member_id, money) values ('memberA',10000);
 
 #### 세션 1
 
-```roomsql
+```sql
 set autocommit false;
 select * from member where member_id='memberA' for update;
 ```
 
 * `select for update`구문을 사용하면 조회를 하면서 동시에 선택한 로우의 락도 획득한다.
-    * 물론 락이 없다면 락을 획득할 때 까지 대기해야 한다.
+  * 물론 락이 없다면 락을 획득할 때 까지 대기해야 한다.
 * 세션 1은 트랜잭션을 종료할 때 까지 `memberA`의 로우의 락을 보유한다.
 
 #### 세션 2
 
-```roomsql
+```sql
 set autocommit false;
 update member set money=500 where member_id = 'memberA';
 ```
@@ -765,18 +765,18 @@ update member set money=500 where member_id = 'memberA';
 * 세션 2는 데이터를 변경하고 싶다. 데이터를 변경하려면 락이 필요하다.
 * 세션 1이 `memberA`로우의 락을 획득했기 때문에 세션 2는 락을 획득할 때 까지 대기한다.
 * 이후에 세션 1이 커밋을 수행하면 세션 2가 락을 획득하고 데이터를 변경한다.
-    * 만약 락 타임아웃 시간이 지나면 락 타임아웃 예외가 발생한다.
+  * 만약 락 타임아웃 시간이 지나면 락 타임아웃 예외가 발생한다.
 
 #### 세션 1, 세션 2 커밋
 
-```roomsql
+```sql
 commit;
 ```
 
 ### 정리
 
 * 트랜잭션과 락은 데이터베이스마다 실제 동작하는 방식이 조금씩 다르다.
-    * 해당 데이터베이스 메뉴얼을 확인해보고, 의도한대로 동작하는지 테스트한 이후에 사용하자.
+  * 해당 데이터베이스 메뉴얼을 확인해보고, 의도한대로 동작하는지 테스트한 이후에 사용하자.
 * 트랜잭션과 락에 대한 더 깊이있는 내용은 JPA 책 16.1 트랜잭션과 락을 참고하자.
 
 ## 트랜잭션 - 적용 1
@@ -825,8 +825,8 @@ public class MemberServiceV1 {
 ```
 
 * `formId`의 회원을 조회해서 `toId`의 회원에게 `money`만큼의 돈을 계좌이체 하는 로직이다.
-    * `fromId`회원의 돈을 `money` 만큼 감소한다. `UPDATE SQL` 실행
-    * `toId`회원의 돈을 `money` 만큼 증가한다. `UPDATE SQL` 실행
+  * `fromId`회원의 돈을 `money` 만큼 감소한다. `UPDATE SQL` 실행
+  * `toId`회원의 돈을 `money` 만큼 증가한다. `UPDATE SQL` 실행
 * 예외 상황을 테스트해보기 위해 `toId`가 `ex`인 경우 예외를 발생한다.
 
 ### MemberService V1 Test
@@ -908,19 +908,19 @@ class MemberServiceV1Test {
 #### 정상이체 - accountTransfer()
 
 * given
-    * 다음 데이터를 저장해서 테스트를 준비한다.
-    * `memberA`: 10000원
-    * `memberB`: 10000원
+  * 다음 데이터를 저장해서 테스트를 준비한다.
+  * `memberA`: 10000원
+  * `memberB`: 10000원
 * when
-    * 계좌이체 로직을 실행한다.
-    * `memberService.accountTransfer()`를 실행한다.
-    * `memberA` -> `memberB` 로 2000원 계좌이체 한다.
-        * `memberA`의 금액이 2000원 감소한다.
-        * `memberB`의 금액이 2000원 증가한다.
+  * 계좌이체 로직을 실행한다.
+  * `memberService.accountTransfer()`를 실행한다.
+  * `memberA` -> `memberB` 로 2000원 계좌이체 한다.
+    * `memberA`의 금액이 2000원 감소한다.
+    * `memberB`의 금액이 2000원 증가한다.
 * then
-    * 계좌이체가 정상 수행되었는지 검증한다.
-    * `memberA` 8000원 -> 2000원 감소
-    * `memberB` 12000원 -> 2000원 증가
+  * 계좌이체가 정상 수행되었는지 검증한다.
+  * `memberA` 8000원 -> 2000원 감소
+  * `memberB` 12000원 -> 2000원 증가
 
 정상이체 로직이 정상 수행되는 것을 확인할 수 있다.
 
@@ -939,37 +939,37 @@ void afterEach() throws SQLException {
 ```
 
 * 테스트가 끝나면 다음 테스트에 영향을 주지 않기 위해 `@AfterEach` 에서 테스트에 사용한 데이터를 모두 삭제한다.
-    * `@BeforeEach` : 각각의 테스트가 수행되기 전에 실행된다.
-    * `@AfterEach` : 각각의 테스트가 실행되고 난 이후에 실행된다.
+  * `@BeforeEach` : 각각의 테스트가 수행되기 전에 실행된다.
+  * `@AfterEach` : 각각의 테스트가 실행되고 난 이후에 실행된다.
 * 테스트 데이터를 제거하는 과정이 불편하지만, 다음 테스트에 영향을 주지 않으려면 테스트에서 사용한 데이터를 모두 제거해야 한다.
-    * 그렇지 않으면 이번 테스트에서 사용한 데이터 때문에 다음 테스트에서 데이터 중복으로 오류가 발생할 수 있다.
+  * 그렇지 않으면 이번 테스트에서 사용한 데이터 때문에 다음 테스트에서 데이터 중복으로 오류가 발생할 수 있다.
 * 테스트에서 사용한 데이터를 제거하는 더 나은 방법으로는 트랜잭션을 활용하면 된다.
-    * 테스트 전에 트랜잭션을 시작하고, 테스트 이후에 트랜잭션을 롤백해버리면 데이터가 처음 상태로 돌아온다.
-    * 이 방법은 이후에 설명하겠다.
+  * 테스트 전에 트랜잭션을 시작하고, 테스트 이후에 트랜잭션을 롤백해버리면 데이터가 처음 상태로 돌아온다.
+  * 이 방법은 이후에 설명하겠다.
 
 #### 이체중 예외 발생 - accountTransferEx()
 
 * given
-    * 다음 데이터를 저장해서 테스트를 준비한다.
-    * `memberA` 10000원
-    * `memberEx` 10000원
+  * 다음 데이터를 저장해서 테스트를 준비한다.
+  * `memberA` 10000원
+  * `memberEx` 10000원
 * when
-    * 계좌이체 로직을 실행한다.
-    * `memberService.accountTransfer()` 를 실행한다.
-    * `memberA` -> `memberEx` 로 2000원 계좌이체 한다.
-        * `memberA`의 금액이 2000원 감소한다.
-        * `memberEx` 회원의 ID는 `ex`이므로 중간에 예외가 발생한다. 이 부분이 중요하다.
+  * 계좌이체 로직을 실행한다.
+  * `memberService.accountTransfer()` 를 실행한다.
+  * `memberA` -> `memberEx` 로 2000원 계좌이체 한다.
+    * `memberA`의 금액이 2000원 감소한다.
+    * `memberEx` 회원의 ID는 `ex`이므로 중간에 예외가 발생한다. 이 부분이 중요하다.
 * then
-    * 계좌이체는 실패한다. `memberA`의 돈만 2000원 줄어든다.
-    * `memberA` 8000원 -> 2000원 감소
-    * `memberB` 10000원
-        * 중간에 실패로 로직이 수행되지 않았다. 따라서 그대로 10000원으로 남아있게 된다.
+  * 계좌이체는 실패한다. `memberA`의 돈만 2000원 줄어든다.
+  * `memberA` 8000원 -> 2000원 감소
+  * `memberB` 10000원
+    * 중간에 실패로 로직이 수행되지 않았다. 따라서 그대로 10000원으로 남아있게 된다.
 
 ### 정리
 
 * 이체중 예외가 발생하게 되면 `memberA`의 금액은 10000원 -> 8000원으로 2000원 감소한다.
 * 그런데 `memberB`의 돈은 그대로 10000원으로 남아있다.
-    * 결과적으로 `memberA`의 돈만 2000원 감소한 것이다!
+  * 결과적으로 `memberA`의 돈만 2000원 감소한 것이다!
 
 ## 트랜잭션 - 적용 2
 
@@ -981,11 +981,11 @@ void afterEach() throws SQLException {
 #### 비즈니스 로직과 트랜잭션
 
 * 트랜잭션은 비즈니스 로직이 있는 서비스 계층에서 시작해야 한다.
-    * 비즈니스 로직이 잘못되면 해당 비즈니스 로직으로 인해 문제가 되는 부분을 함께 롤백해야 하기 때문이다.
+  * 비즈니스 로직이 잘못되면 해당 비즈니스 로직으로 인해 문제가 되는 부분을 함께 롤백해야 하기 때문이다.
 * 그런데 트랜잭션을 시작하려면 커넥션이 필요하다.
-    * 결국 서비스 계층에서 커넥션을 만들고, 트랜잭션 커밋 이후에 커넥션을 종료해야 한다.
+  * 결국 서비스 계층에서 커넥션을 만들고, 트랜잭션 커밋 이후에 커넥션을 종료해야 한다.
 * 애플리케이션에서 DB 트랜잭션을 사용하려면 **트랜잭션을 사용하는 동안 같은 커넥션**을 유지해야한다.
-    * 그래야 같은 세션을 사용할 수 있다.
+  * 그래야 같은 세션을 사용할 수 있다.
 
 #### 커넥션과 세션
 
@@ -1082,10 +1082,10 @@ public class MemberRepositoryV2 {
 #### 주의 - 코드에서 다음 부분을 주의해서 보자!
 
 * 커넥션 유지가 필요한 두 메서드는 파라미터로 넘어온 커넥션을 사용해야 한다.
-    * 따라서 `con = getConnection()`코드가 있으면 안된다.
+  * 따라서 `con = getConnection()`코드가 있으면 안된다.
 * 커넥션 유지가 필요한 두 메서드는 리포지토리에서 커넥션을 닫으면 안된다.
-    * 커넥션을 전달 받은 리포지토리 뿐만 아니라 이후에도 커넥션을 계속 이어서 사용하기 때문이다.
-    * 이후 서비스 로직이 끝날 때 트랜잭션을 종료하고 닫아야 한다.
+  * 커넥션을 전달 받은 리포지토리 뿐만 아니라 이후에도 커넥션을 계속 이어서 사용하기 때문이다.
+  * 이후 서비스 로직이 끝날 때 트랜잭션을 종료하고 닫아야 한다.
 
 ### MemberService V2
 
@@ -1173,24 +1173,24 @@ public class MemberServiceV2 {
 ```
 
 * `Connection con = dataSource.getConnection();`
-    * 트랜잭션을 시작하려면 커넥션이 필요하다.
+  * 트랜잭션을 시작하려면 커넥션이 필요하다.
 * `con.setAutoCommit(false);`
-    * 트랜잭션을 시작하려면 자동 커밋 모드를 꺼야한다.
-    * 이렇게 하면 커넥션을 통해 세션에 `set autocommit false`가 전달되고, 이후부터는 수동 커밋 모드로 동작한다.
-    * 이렇게 자동 커밋 모드를 수동 커밋 모드로 변경하는 것을 트랜잭션을 시작한다고 보통 표현한다.
+  * 트랜잭션을 시작하려면 자동 커밋 모드를 꺼야한다.
+  * 이렇게 하면 커넥션을 통해 세션에 `set autocommit false`가 전달되고, 이후부터는 수동 커밋 모드로 동작한다.
+  * 이렇게 자동 커밋 모드를 수동 커밋 모드로 변경하는 것을 트랜잭션을 시작한다고 보통 표현한다.
 * `bizLogic(con, fromId, toId, money);`
-    * 트랜잭션이 시작된 커넥션을 전달하면서 비즈니스 로직을 수행한다.
-    * 이렇게 분리한 이유는 트랜잭션을 관리하는 로직과 실제 비즈니스 로직을 구분하기 위함이다.
+  * 트랜잭션이 시작된 커넥션을 전달하면서 비즈니스 로직을 수행한다.
+  * 이렇게 분리한 이유는 트랜잭션을 관리하는 로직과 실제 비즈니스 로직을 구분하기 위함이다.
 * `memberRepository.update(con..)`
-    * 비즈니스 로직을 보면 리포지토리를 호출할 때 커넥션을 전달하는 것을 확인할 수 있다.
+  * 비즈니스 로직을 보면 리포지토리를 호출할 때 커넥션을 전달하는 것을 확인할 수 있다.
 * `con.commit();`
-    * 비즈니스 로직이 정상 수행되면 트랜잭션을 커밋한다.
+  * 비즈니스 로직이 정상 수행되면 트랜잭션을 커밋한다.
 * `con.rollback();`
-    * `catch(Ex){ ... }`를 사용해서 비즈니스 로직 수행 도중에 예외가 발생하면 트랜잭션을 롤백한다.
+  * `catch(Ex){ ... }`를 사용해서 비즈니스 로직 수행 도중에 예외가 발생하면 트랜잭션을 롤백한다.
 * `release(con);`
-    * `finally { ... }`를 사용해서 커넥션을 모두 사용하고 나면 안전하게 종료한다.
-    * 그런데 커넥션 풀을 사용하면 `con.close()` 를 호출 했을 때 커넥션이 종료되는 것이 아니라 풀에 반납된다.
-    * 현재 수동 커밋 모드로 동작하기 때문에 풀에 돌려주기 전에 기본 값인 자동 커밋 모드로 변경하는 것이 안전하다.
+  * `finally { ... }`를 사용해서 커넥션을 모두 사용하고 나면 안전하게 종료한다.
+  * 그런데 커넥션 풀을 사용하면 `con.close()` 를 호출 했을 때 커넥션이 종료되는 것이 아니라 풀에 반납된다.
+  * 현재 수동 커밋 모드로 동작하기 때문에 풀에 돌려주기 전에 기본 값인 자동 커밋 모드로 변경하는 것이 안전하다.
 
 ### MemberService V2 Test
 
@@ -1277,22 +1277,22 @@ class MemberServiceV2Test {
 #### 이체중 예외 발생 - accountTransferEx()
 
 * 다음 데이터를 저장해서 테스트를 준비한다.
-    * `memberA` 10000원
-    * `memberEx` 10000원
+  * `memberA` 10000원
+  * `memberEx` 10000원
 * 계좌이체 로직을 실행한다.
-    * `memberService.accountTransfer()`를 실행한다.
-    * 커넥션을 생성하고 트랜잭션을 시작한다.
-    * `memberA` -> `memberEx`로 2000원 계좌이체 한다.
-        * `memberA`의 금액이 2000원 감소한다.
-        * `memberEx` 회원의 ID는 `ex`이므로 중간에 예외가 발생한다.
-    * 예외가 발생했으므로 트랜잭션을 롤백한다.
+  * `memberService.accountTransfer()`를 실행한다.
+  * 커넥션을 생성하고 트랜잭션을 시작한다.
+  * `memberA` -> `memberEx`로 2000원 계좌이체 한다.
+    * `memberA`의 금액이 2000원 감소한다.
+    * `memberEx` 회원의 ID는 `ex`이므로 중간에 예외가 발생한다.
+  * 예외가 발생했으므로 트랜잭션을 롤백한다.
 * 계좌이체는 실패했다.
-    * 롤백을 수행해서 `memberA`의 돈이 기존 10000원으로 복구되었다.
-    * `memberA` 10000원
-        * 트랜잭션 롤백으로 복구된다.
-    * `memberB` 10000원
-        * 중간에 실패로 로직이 수행되지 않았다.
-        * 따라서 그대로 10000원으로 남아있게 된다.
+  * 롤백을 수행해서 `memberA`의 돈이 기존 10000원으로 복구되었다.
+  * `memberA` 10000원
+    * 트랜잭션 롤백으로 복구된다.
+  * `memberB` 10000원
+    * 중간에 실패로 로직이 수행되지 않았다.
+    * 따라서 그대로 10000원으로 남아있게 된다.
 
 트랜잭션 덕분에 계좌이체가 실패할 때 롤백을 수행해서 모든 데이터를 정상적으로 초기화 할 수 있게 되었다.
 결과적으로 계좌이체를 수행하기 직전으로 돌아가게 된다.

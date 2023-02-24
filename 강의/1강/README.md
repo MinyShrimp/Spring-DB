@@ -46,7 +46,7 @@ dependencies {
 
 ### 테이블 생성
 
-```roomsql
+```sql
 drop table member if exists cascade;
 create table member (
     member_id varchar(10),
@@ -60,7 +60,7 @@ insert into member(member_id, money) values ('hi2',20000);
 
 ### 테이블 확인
 
-```roomsql
+```sql
 select * from member;
 ```
 
@@ -309,7 +309,7 @@ JDBC가 제공하는 `DriverManager`는 라이브러리에 등록된 DB 드라�
 
 ### schema.sql
 
-```roomsql
+```sql
 drop table member if exists cascade;
 create table member (
     member_id varchar(10),
@@ -627,7 +627,7 @@ ResultSet executeQuery()throws SQLException;
 따라서 조회 결과가 항상 1건이므로 `while` 대신에 `if`를 사용한다.
 다음 SQL을 보면 PK인 `member_id`를 항상 지정하는 것을 확인할 수 있다.
 
-```roomsql
+```sql
 select * from member where member_id = ?;
 ```
 
@@ -802,7 +802,7 @@ hello.springdb1.v0.repository.MemberRepositoryV0Test - updatedMember = Member(me
 `pstmt.executeUpdate()` 의 결과가 1인 것을 확인할 수 있다.
 이것은 해당 SQL에 영향을 받은 로우 수가 1개라는 뜻이다.
 
-```roomsql
+```sql
 select * from member;
 ```
 
