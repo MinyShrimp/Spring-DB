@@ -743,6 +743,187 @@ class MemberServiceV3_1Test {
 
 ## 트랜잭션 문제 해결 - 트랜잭션 템플릿
 
+### 트랜잭션 사용 코드
+
+```java
+// 트랜잭션 시작
+TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
+try {
+    // 비즈니스 로직
+    bizLogic(fromId, toId, money);
+    
+    // 성공시 커밋
+    transactionManager.commit(status); 
+} catch (Exception e) {
+    // 실패시 롤백
+    transactionManager.rollback(status); 
+    throw new IllegalStateException(e);
+}
+```
+
+* 트랜잭션을 시작하고, 비즈니스 로직을 실행하고, 성공하면 커밋하고, 예외가 발생해서 실패하면 롤백한다.
+* 다른 서비스에서 트랜잭션을 시작하려면 `try`, `catch`, `finally`를 포함한 성공시 커밋, 실패시 롤백 코드가 반복될 것이다.
+* 이런 형태는 각각의 서비스에서 반복된다. 달라지는 부분은 비즈니스 로직 뿐이다.
+* 이럴 때 **템플릿 콜백 패턴**을 활용하면 이런 반복 문제를 깔끔하게 해결할 수 있다.
+
+### 트랜잭션 템플릿
+
+#### TransactionTemplate
+
+```java
+public class TransactionTemplate {
+    private PlatformTransactionManager transactionManager;
+    public <T> T execute(TransactionCallback<T> action) { ... }
+    void executeWithoutResult(Consumer<TransactionStatus> action) { ... }
+}
+```
+
+* `execute()`: 응답 값이 있을 때 사용한다.
+* `executeWithoutResult()`: 응답 값이 없을 때 사용한다.
+
+#### MemberService V3_2
+
+```java
+/**
+ * 계좌 이체 비즈니스 로직 V3-2
+ * - 트랜잭션 템플릿 사용
+ */
+@Slf4j
+public class MemberServiceV3_2 {
+    private final TransactionTemplate txTemplate;
+    private final MemberRepositoryV3 repository;
+
+    public MemberServiceV3_2(
+            PlatformTransactionManager transactionManager,
+            MemberRepositoryV3 repository
+    ) {
+        this.txTemplate = new TransactionTemplate(transactionManager);
+        this.repository = repository;
+    }
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    public void accountTransfer(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        // 트랜잭션 시작
+        txTemplate.executeWithoutResult((status) -> {
+            try {
+                // 비즈니스 로직
+                bizLogic(fromId, toId, money);
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+    }
+
+    /**
+     * fromId -> toId
+     * money 만큼의 돈을 전송
+     */
+    private void bizLogic(
+            String fromId,
+            String toId,
+            int money
+    ) throws SQLException {
+        Member fromMember = repository.findById(fromId);
+        Member toMember = repository.findById(toId);
+
+        repository.update(fromId, fromMember.getMoney() - money);
+        validation(toMember);
+        repository.update(toId, toMember.getMoney() + money);
+    }
+
+    /**
+     * 대상 회원의 ID가 ex 인지 검증
+     */
+    private void validation(
+            Member toMember
+    ) {
+        if (toMember.getMemberId().equals("ex")) {
+            throw new IllegalStateException("이체중 예외 발생");
+        }
+    }
+}
+```
+
+* `TransactionTemplate`을 사용하려면 `transactionManager`가 필요하다.
+* 생성자에서 `transactionManager`를 주입 받으면서 `TransactionTemplate`을 생성했다.
+
+#### 트랜잭션 템플릿 사용 로직
+
+```java
+// 트랜잭션 시작
+txTemplate.executeWithoutResult((status) -> {
+    try {
+        // 비즈니스 로직
+        bizLogic(fromId, toId, money);
+    } catch (SQLException e) {
+        throw new IllegalStateException(e);
+    }
+});
+```
+
+* 트랜잭션 템플릿 덕분에 트랜잭션을 시작하고, 커밋하거나 롤백하는 코드가 모두 제거되었다.
+* 트랜잭션 템플릿의 기본 동작은 다음과 같다.
+    * 비즈니스 로직이 정상 수행되면 커밋한다.
+    * 언체크 예외가 발생하면 롤백한다. 그 외의 경우 커밋한다.
+        * 체크 예외의 경우에는 커밋하는데, 이 부분은 뒤에서 설명한다.
+* 코드에서 예외를 처리하기 위해 `try~catch` 가 들어갔는데, `bizLogic()`메서드를 호출하면 `SQLException` 체크 예외를 넘겨준다.
+    * 해당 람다에서 체크 예외를 밖으로 던질 수 없기 때문에 언체크 예외로 바꾸어 던지도록 예외를 전환했다.
+
+### MemberService V3_2 Test
+
+```java
+@Slf4j
+class MemberServiceV3_2Test {
+    private static final String MEMBER_A = "memberA";
+    private static final String MEMBER_B = "memberB";
+    private static final String MEMBER_EX = "ex";
+
+    private MemberRepositoryV3 memberRepository;
+    private MemberServiceV3_2 memberService;
+
+    /**
+     * 각 테스트가 시작하기전 초기화
+     */
+    @BeforeEach
+    void beforeEach() {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource(URL, USERNAME, PASSWORD);
+        PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+        memberRepository = new MemberRepositoryV3(dataSource);
+        memberService = new MemberServiceV3_2(transactionManager, memberRepository);
+    }
+
+    /**
+     * 각 테스트가 끝나면 데이터 삭제
+     */
+    @AfterEach()
+    void afterEach() throws SQLException {
+        memberRepository.delete(MEMBER_A);
+        memberRepository.delete(MEMBER_B);
+        memberRepository.delete(MEMBER_EX);
+    }
+    
+    // ...
+}
+```
+
+### 정리
+
+* 트랜잭션 템플릿 덕분에, 트랜잭션을 사용할 때 반복하는 코드를 제거할 수 있었다.
+* 하지만 이곳은 서비스 로직인데 비즈니스 로직 뿐만 아니라 트랜잭션을 처리하는 기술 로직이 함께 포함되어 있다.
+* 애플리케이션을 구성하는 로직을 핵심 기능과 부가 기능으로 구분하자면 서비스 입장에서 비즈니스 로직은 핵심 기능이고, 트랜잭션은 부가 기능이다.
+* 이렇게 비즈니스 로직과 트랜잭션을 처리하는 기술 로직이 한 곳에 있으면 두 관심사를 하나의 클래스에서 처리하게 된다.
+    * 결과적으로 코드를 유지보수하기 어려워진다.
+* 서비스 로직은 가급적 핵심 비즈니스 로직만 있어야 한다.
+    * 하지만 트랜잭션 기술을 사용하려면 어쩔 수 없이 트랜잭션 코드가 나와야 한다. 어떻게 하면 이 문제를 해결할 수 있을까?
+
 ## 트랜잭션 문제 해결 - 트랜잭션 AOP 이해
 
 ## 트랜잭션 문제 해결 - 트랜잭션 AOP 적용
